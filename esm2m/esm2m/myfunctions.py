@@ -180,7 +180,7 @@ def percent_by_year(ds, title, plot, total):
 #         ds_rPercent = (ds_rSum/total)*100
         plot.plot(ds_year,color=colortab[i],label=str(year))
         i += 1
-    plot.legend()
+    # plot.legend()
     plot.set_title(title)
     plot.set_xlabel('months')
     plot.set_ylabel('percent of ocean')
