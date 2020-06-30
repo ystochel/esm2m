@@ -171,8 +171,9 @@ def year_comp(area, ds, plot, coords, cont1, cont2, cont3, depth):
         
 def percent_by_year(ds, title, plot, total):
     colortab = ['tab:blue','tab:orange','tab:green','tab:purple','tab:brown','pink','tab:grey','tab:olive','tab:cyan','tab:pink','navy','darkgreen']
-    years = np.arange(1990, 2110, 10)
+    years = np.arange(2010, 2110, 10)
     i = 0
+    wn.filterwarnings('ignore')
     for year in years:
         ds_year = ds.sel(time=slice(str(year)+'-01-01',str(year)+'-12-31'))
 #         ds_red = ~np.isnan(ds_year.where(ds_year['MI']<mi))
@@ -180,7 +181,7 @@ def percent_by_year(ds, title, plot, total):
 #         ds_rPercent = (ds_rSum/total)*100
         plot.plot(ds_year,color=colortab[i],label=str(year))
         i += 1
-    # plot.legend()
+    plot.legend()
     plot.set_title(title)
     plot.set_xlabel('months')
     plot.set_ylabel('percent of ocean')
@@ -240,3 +241,26 @@ def get_yellow(ds, total):
     ds_yPercent = (ds_ySum/total)*100
     ds_yAvg = ds_yPercent.mean(dim='ensemble')
     return ds_yAvg
+
+def get_total(ds):
+    rootdir = '/local/ss23/GFDL_LEs/'
+    subdir = 'AREA_FILES_ETC'
+    filename_area = 'WOA2001_grid.nc'
+    path_area = rootdir+subdir+'/'+filename_area
+    area = xr.open_dataset(path_area)['AREA'].rename({'latitude':'yt_ocean','longitude':'xt_ocean'})
+    area = area.assign_coords({'xt_ocean':ds['xt_ocean'],'yt_ocean':ds['yt_ocean']})
+    oceanmask = np.isfinite(ds['MI'].isel(time=0).squeeze())
+    area_masked = area.where(oceanmask,np.nan)
+    ds_total = ~np.isnan(area.where(oceanmask))
+    total = ds_total.sum(dim='xt_ocean').sum(dim='yt_ocean')
+    return total
+
+def plot_allEns(ds_all, mi, plot, col, total):
+    ens = np.arange(0,30,1)
+    wn.filterwarnings('ignore')
+    for mem in ens:
+        ds = ds_all.sel(ensemble=mem)
+        ds_mi = ~np.isnan(ds.where(ds['MI']<mi))
+        ds_miSum = ds_mi['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
+        ds_miPercent = (ds_miSum/total)*100
+        plot.plot(np.unique(ds_miPercent['time.year']),ds_miPercent.groupby('time.year').mean(),color=col)
