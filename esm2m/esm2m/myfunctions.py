@@ -204,7 +204,7 @@ def percent_ens_comp(ds_all, plot, mi, total):
             i += 1
     
 def months_of_year(data,year,title):
-    fig, axs = plt.subplots(figsize=(20,20),nrows=4,ncols=3, subplot_kw={'projection':ccrs.Robinson(central_longitude=180)})
+    fig, axs = plt.subplots(figsize=(20,16),nrows=4,ncols=3, subplot_kw={'projection':ccrs.Robinson(central_longitude=180)})
     fig.suptitle(title,fontsize=15) # Specify a figure title
     graph(data.sel(time=slice(year+'-01-01',year+'-01-31')), axs[0,0], '(a) January', None, None, True)
     graph(data.sel(time=slice(year+'-02-01',year+'-02-28')), axs[0,1], '(b) February', None, None, True)
@@ -255,12 +255,12 @@ def get_total(ds):
     total = ds_total.sum(dim='xt_ocean').sum(dim='yt_ocean')
     return total
 
-def plot_allEns(ds_all, mi, plot, col, total):
+def plot_allEns(ds_all, plot, col):
     ens = np.arange(0,30,1)
     wn.filterwarnings('ignore')
     for mem in ens:
         ds = ds_all.sel(ensemble=mem)
-        ds_mi = ~np.isnan(ds.where(ds['MI']<mi))
-        ds_miSum = ds_mi['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
-        ds_miPercent = (ds_miSum/total)*100
-        plot.plot(np.unique(ds_miPercent['time.year']),ds_miPercent.groupby('time.year').mean(),color=col)
+        # ds_mi = ~np.isnan(ds.where(ds['MI']<mi))
+        # ds_miSum = ds_mi['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
+        # ds_miPercent = (ds_miSum/total)*100
+        plot.plot(np.unique(ds['time.year']),ds.groupby('time.year').mean(),color=col)
