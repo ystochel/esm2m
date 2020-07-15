@@ -5,6 +5,7 @@ from cartopy import crs as ccrs
 import cartopy.feature as cfeature
 from cartopy.util import add_cyclic_point
 import warnings as wn
+import matplotlib.pylab as pl
 
 def graph(ds, plot, title, date, coords, ens):
         
@@ -141,6 +142,8 @@ def year_comp(area, ds, plot, coords, cont1, cont2, cont3, depth):
     colors = ['khaki','limegreen','orange','teal','mediumpurple','slategray','indigo','palegreen','turquoise','pink','navy']
     colorblue = ['turquoise','darkcyan','powderblue','deepskyblue','royalblue','navy','slategray','blue']
     colortab = ['tab:blue','tab:orange','tab:green','tab:purple','tab:brown','tab:pink','tab:grey','tab:olive','tab:cyan','pink','navy','darkgreen']
+    n = 12
+    colorseq = pl.cm.cividis(np.linspace(0,1,n))
     
     ds_lim = ds.sel(xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3]))
     oceanmask = np.isfinite(ds['MI'].sel(time='1950-01-16',xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3])).squeeze())
@@ -151,7 +154,7 @@ def year_comp(area, ds, plot, coords, cont1, cont2, cont3, depth):
     for year in years:
         ds_year = ds_lim.sel(time=slice(str(year)+'-01-01',str(year)+'-12-31'))
         mean_year = (ds_year['MI']*area_masked).sum(['xt_ocean','yt_ocean'])/(area_masked.sum(['xt_ocean','yt_ocean']))
-        plot.plot(np.unique(mean_year['time.month']),mean_year.groupby('time.month').mean(),color=colortab[i],label=str(year))
+        plot.plot(np.unique(mean_year['time.month']),mean_year.groupby('time.month').mean(),color=colorseq[i],label=str(year))
         i += 1
     plot.legend()
     if cont1 == True:
@@ -163,14 +166,16 @@ def year_comp(area, ds, plot, coords, cont1, cont2, cont3, depth):
     plot.set_ylabel('metabolic index')
     plot.set_xlabel('month')
     if coords[0] == None:
-        plot.set_title('Mean Metabolic Index, latitude '+str(coords[2])+ ' to '+str(coords[3])+ ', by Year, '+depth)
+        plot.set_title(str(coords[2])+ ' to '+str(coords[3]))
     elif coords[2] == None:
-        plot.set_title('Mean Metabolic Index, longitude'+str(coords[0])+ ' to '+str(coords[1])+ ', by Year, '+depth)
+        plot.set_title(str(coords[0])+ ' to '+str(coords[1]))
     else:
-        plot.set_title('Mean Metabolic Index, ['+str(coords[0])+','+str(coords[1])+','+str(coords[2])+','+str(coords[3])+'] by Year, '+depth)
+        plot.set_title('['+str(coords[0])+','+str(coords[1])+','+str(coords[2])+','+str(coords[3])+']')
         
 def percent_by_year(ds, title, plot, total):
     colortab = ['tab:blue','tab:orange','tab:green','tab:purple','tab:brown','pink','tab:grey','tab:olive','tab:cyan','tab:pink','navy','darkgreen']
+    n = 12
+    colors = pl.cm.viridis(np.linspace(0,1,n))
     years = np.arange(2010, 2110, 10)
     i = 0
     wn.filterwarnings('ignore')
@@ -179,7 +184,7 @@ def percent_by_year(ds, title, plot, total):
 #         ds_red = ~np.isnan(ds_year.where(ds_year['MI']<mi))
 #         ds_rSum = ds_red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
 #         ds_rPercent = (ds_rSum/total)*100
-        plot.plot(ds_year,color=colortab[i],label=str(year))
+        plot.plot(ds_year,color=colors[i],label=str(year))
         i += 1
     plot.legend()
     plot.set_title(title)
@@ -264,3 +269,19 @@ def plot_allEns(ds_all, plot, col):
         # ds_miSum = ds_mi['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
         # ds_miPercent = (ds_miSum/total)*100
         plot.plot(np.unique(ds['time.year']),ds.groupby('time.year').mean(),color=col)
+        
+def map_years(da, ax, month, title):
+    wn.filterwarnings('ignore')
+    years = np.arange(1950,2110,10)
+    crs = ccrs.PlateCarree()
+    X = da[month]['xt_ocean']
+    Y = da[month]['yt_ocean']
+    Z = da[month]['MI'].squeeze()
+    Z, X = add_cyclic_point(Z,coord=X)
+    im = ax.contourf(X,Y,Z,years,cmap='Blues',transform=crs)
+    ax.add_feature(cfeature.LAND,zorder=10,facecolor='darkgray')
+    ax.gridlines()
+    ax.coastlines()
+    ax.set_title(title)
+    cbar = plt.colorbar(im,ax=ax,orientation='horizontal',fraction=0.05,pad=0.05,shrink=0.5)
+    cbar.set_label('year',fontsize=12)
