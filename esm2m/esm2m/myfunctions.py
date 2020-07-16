@@ -146,7 +146,7 @@ def year_comp(area, ds, plot, coords, cont1, cont2, cont3, depth):
     colorseq = pl.cm.cividis(np.linspace(0,1,n))
     
     ds_lim = ds.sel(xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3]))
-    oceanmask = np.isfinite(ds['MI'].sel(time='1950-01-16',xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3])).squeeze())
+    oceanmask = np.isfinite(ds['MI'].sel(time='1950-01-31',xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3])).squeeze())
     area_lim = area.sel(xt_ocean=slice(coords[0],coords[1]),yt_ocean=slice(coords[2],coords[3]))
         
     area_masked = area_lim.where(oceanmask,np.nan)
@@ -211,18 +211,18 @@ def percent_ens_comp(ds_all, plot, mi, total):
 def months_of_year(data,year,title):
     fig, axs = plt.subplots(figsize=(20,16),nrows=4,ncols=3, subplot_kw={'projection':ccrs.Robinson(central_longitude=180)})
     fig.suptitle(title,fontsize=15) # Specify a figure title
-    graph(data.sel(time=slice(year+'-01-01',year+'-01-31')), axs[0,0], '(a) January', None, None, True)
-    graph(data.sel(time=slice(year+'-02-01',year+'-02-28')), axs[0,1], '(b) February', None, None, True)
-    graph(data.sel(time=slice(year+'-03-01',year+'-03-31')), axs[0,2], '(c) March', None, None, True)
-    graph(data.sel(time=slice(year+'-04-01',year+'-04-30')), axs[1,0], '(d) April', None, None, True)
-    graph(data.sel(time=slice(year+'-05-01',year+'-05-31')), axs[1,1], '(e) May', None, None, True)
-    graph(data.sel(time=slice(year+'-06-01',year+'-06-30')), axs[1,2], '(f) June', None, None, True)
-    graph(data.sel(time=slice(year+'-07-01',year+'-07-31')), axs[2,0], '(g) July', None, None, True)
-    graph(data.sel(time=slice(year+'-08-01',year+'-08-31')), axs[2,1], '(h) August', None, None, True)
-    graph(data.sel(time=slice(year+'-09-01',year+'-09-30')), axs[2,2], '(e) September', None, None, True)
-    graph(data.sel(time=slice(year+'-10-01',year+'-10-30')), axs[3,0], '(f) October', None, None, True)
-    graph(data.sel(time=slice(year+'-11-01',year+'-11-30')), axs[3,1], '(g) November', None, None, True)
-    im = graph(data.sel(time=slice(year+'-12-01',year+'-12-31')), axs[3,2], '(h) December', None, None, True)
+    graph(data.sel(time=slice('2100-01-01','2100-01-31')), axs[0,0], 'Jan.', None, None, True)
+    graph(data.sel(time=slice('2100-02-01','2100-02-28')), axs[0,1], 'Feb.', None, None, True)
+    graph(data.sel(time=slice('2100-03-01','2100-03-31')), axs[0,2], 'March', None, None, True)
+    graph(data.sel(time=slice('2100-04-01','2100-04-30')), axs[1,0], 'April', None, None, True)
+    graph(data.sel(time=slice('2100-05-01','2100-05-31')), axs[1,1], 'May.', None, None, True)
+    graph(data.sel(time=slice('2100-06-01','2100-06-30')), axs[1,2], 'June.', None, None, True)
+    graph(data.sel(time=slice('2100-07-01','2100-07-31')), axs[2,0], 'July', None, None, True)
+    graph(data.sel(time=slice('2100-08-01','2100-08-31')), axs[2,1], 'August', None, None, True)
+    graph(data.sel(time=slice('2100-09-01','2100-09-30')), axs[2,2], 'Sept.', None, None, True)
+    graph(data.sel(time=slice('2100-10-01','2100-10-31')), axs[3,0], 'Oct.', None, None, True)
+    graph(data.sel(time=slice('2100-11-01','2100-11-30')), axs[3,1], 'Nov.', None, None, True)
+    im = graph(data.sel(time=slice('2100-12-01','2100-12-31')), axs[3,2], 'Dec.', None, None, True)
     cbar = plt.colorbar(im,ax=axs,orientation='horizontal',fraction=0.05,pad=0.05,shrink=0.5)
     cbar.set_label('metabolic index',fontsize=12)
 
@@ -285,3 +285,54 @@ def map_years(da, ax, month, title):
     ax.set_title(title)
     cbar = plt.colorbar(im,ax=ax,orientation='horizontal',fraction=0.05,pad=0.05,shrink=0.5)
     cbar.set_label('year',fontsize=12)
+    
+def find_p(ds, mi, total):
+    red = ~np.isnan(ds.where(ds['MI'] < mi))
+    s = red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
+    perc = (s/total)*100
+    p = perc.mean(dim='ensemble')
+    return p
+
+def percent(ds, ax, title):
+    n = 12
+    colors = pl.cm.viridis(np.linspace(0,1,n))
+    years = np.arange(1990, 2110, 10)
+    i = 0
+    wn.filterwarnings('ignore')
+    for year in years:
+        ds_year = ds.sel(time=slice(str(year)+'-01-01',str(year)+'-12-31'))
+        ax.plot(ds_year,color=colors[i],label=str(year))
+        i += 1
+    ax.set_title(title)
+    ax.set_xlabel('months')
+    ax.set_ylabel('percent of ocean')
+    handles, labels = ax.get_legend_handles_labels()
+    ax.legend(handles[::-1], labels[::-1])
+    
+def ds_month(ds, thresh):
+    mi = ds.squeeze()
+    mi_thresh = ~np.isnan(mi.where(mi['MI']<thresh))
+    mi_month = mi_thresh.groupby('time.year').sum(dim='time')
+    mi_mean = mi_month.mean(dim='ensemble')
+    return mi_mean
+
+def map_months(plot, ds, cmap, title, year):
+    ds_sum = ds.sel(year=year)
+    wn.filterwarnings('ignore')
+    months = [0,1,2,3,4,5,6,7,8,9,10,11,12]
+    bounds = np.arange(1,13,1)
+    crs = ccrs.PlateCarree()
+    X = ds_sum['xt_ocean']
+    Y = ds_sum['yt_ocean']
+    Z = ds_sum['MI'].squeeze()
+    Z, X = add_cyclic_point(Z,coord=X)
+    im = plot.contourf(X,Y,Z,months,cmap=cmap,transform=crs,extend='min')
+    
+    # Add a land mask to your plot, as well as grid lines and coastlines
+    plot.add_feature(cfeature.LAND,zorder=10,facecolor='darkgray')
+    plot.gridlines()
+    plot.coastlines()
+    plot.set_title(title,fontsize=14,loc='center')
+    # im.cmap.set_under('lightcyan')  
+    # im.set_clim(0, 1) 
+    return im
