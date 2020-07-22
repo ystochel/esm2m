@@ -9,8 +9,8 @@ import matplotlib.pylab as pl
 
 def graph(ds, plot, title, date, coords, ens):
         
-    clevs = np.array([0,1,2,3,4,120])
-    colorange = ['red', 'orange', 'yellow','green','blue']
+    clevs = np.array([0,1,2,3,4,5,120])
+    colorange = ['red', 'orange', 'yellow','green','purple','lightskyblue']
     crs = ccrs.PlateCarree()
     X = ds['xt_ocean']
     Y = ds['yt_ocean']
@@ -286,10 +286,12 @@ def map_years(da, ax, month, title):
     cbar = plt.colorbar(im,ax=ax,orientation='horizontal',fraction=0.05,pad=0.05,shrink=0.5)
     cbar.set_label('year',fontsize=12)
     
-def find_p(ds, mi, total):
+def find_p(ds, mi, area):
     red = ~np.isnan(ds.where(ds['MI'] < mi))
-    s = red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
-    perc = (s/total)*100
+    s = (red['MI']*area).sum(['xt_ocean','yt_ocean'])/(area.sum(['xt_ocean','yt_ocean']))
+    perc = s*100
+#     s = red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
+#     perc = (s/total)*100
     p = perc.mean(dim='ensemble')
     return p
 
