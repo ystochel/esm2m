@@ -6,6 +6,7 @@ import cartopy.feature as cfeature
 from cartopy.util import add_cyclic_point
 import warnings as wn
 import matplotlib.pylab as pl
+from xhistogram.xarray import histogram as xh
 
 def graph(ds, plot, title, date, coords, ens):
         
@@ -19,7 +20,9 @@ def graph(ds, plot, title, date, coords, ens):
     elif type(date) == str:
         Z = ds['MI'].sel(time=date).squeeze()
     elif type(date) == int:
-        Z = ds['MI'].groupby('time.year').mean().sel(year=date).squeeze()
+        year = ds['MI'].groupby('time.year').min()
+        avg = year.mean(dim='ensemble')
+        Z = avg.sel(year=date).squeeze()
     Z, X = add_cyclic_point(Z,coord=X)
     im = plot.contourf(X,Y,Z,clevs,colors=colorange,transform=crs)
     
@@ -287,13 +290,13 @@ def map_years(da, ax, month, title):
     cbar.set_label('year',fontsize=12)
     
 def find_p(ds, mi, area):
-    red = ~np.isnan(ds.where(ds['MI'] < mi))
+    red = ~np.isnan(ds.where(ds['MI'] > mi))
     s = (red['MI']*area).sum(['xt_ocean','yt_ocean'])/(area.sum(['xt_ocean','yt_ocean']))
     perc = s*100
 #     s = red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
 #     perc = (s/total)*100
-    p = perc.mean(dim='ensemble')
-    return p
+    # p = perc.mean(dim='ensemble')
+    return perc
 
 def percent(ds, ax, title):
     n = 12
@@ -338,3 +341,58 @@ def map_months(plot, ds, cmap, title, year):
     # im.cmap.set_under('lightcyan')  
     # im.set_clim(0, 1) 
     return im
+
+def species_hab(df_species):
+    ds_cod = df_species.to_xarray()
+    lon_bins = np.arange(-180,181)
+    lat_bins = np.arange(-90,91)
+    species_dist = xh(ds_cod['decimalLatitude'], ds_cod['decimalLongitude'],bins=[lat_bins, lon_bins])
+    ds_hab = species_dist.where(species_dist<=1,1).rename({'decimalLongitude_bin':'xt_ocean','decimalLatitude_bin':'yt_ocean'})
+    ds_hab = ds_hab.to_dataset().rename({'histogram_decimalLatitude_decimalLongitude':'MI'})
+    return ds_hab
+
+def mi_hab(ds, mi, hab, area):
+    red = ~np.isnan(ds.where(ds['MI']>mi))
+    hab = hab.reindex_like(red, method='nearest', tolerance=0.01)
+    thresh_red = hab*red
+    redWhere = ~np.isnan(thresh_red.where(thresh_red['MI']!=0))
+    redYear = redWhere.groupby('time.year').mean().sel(year=slice(2000,2100))
+    redNum = (redYear*area).sum(['xt_ocean','yt_ocean'])
+    redDen = (redYear.sel(year=2000)*area).sum(['xt_ocean','yt_ocean'])
+    redPerc = (redNum['MI']/redDen['MI'])*100
+    redEns = redPerc.mean(dim='ensemble')
+    return redEns
+
+def plot_dist(red, orange, yel, gr, pur, species):
+    fig, ax = plt.subplots(figsize=(10,8))
+    wn.filterwarnings('ignore')
+    fig.suptitle('RCP8.5 Ensemble Average, '+species+' Distribution, Z=0m (original data/2)')
+    ax.plot(np.unique(red['year']),red,color='red',label='MI > 1')
+    ax.plot(np.unique(orange['year']),orange,color='orange',label='MI > 2')
+    ax.plot(np.unique(yel['year']),yel,color='yellow',label='MI > 3')
+    ax.plot(np.unique(gr['year']),gr,color='green',label='MI > 4')
+    ax.plot(np.unique(pur['year']),pur,color='purple',label='MI > 5')
+    ax.legend()
+    ax.set_xlabel('Year')
+    ax.set_ylabel('Percent of 1990 habitat')
+    
+def species_dist(df_species):
+    ds_cod = df_species.to_xarray()
+    lon_bins = np.arange(-180,181)
+    lat_bins = np.arange(-90,91)
+    species_dist = xh(ds_cod['decimalLatitude'], ds_cod['decimalLongitude'],bins=[lat_bins, lon_bins])
+    ds_hab = species_dist.where(species_dist<=1,1).rename({'decimalLongitude_bin':'xt_ocean','decimalLatitude_bin':'yt_ocean'})
+    return ds_hab
+
+def mi_dist(ds, mi, hab, area):
+    hab = hab.to_dataset().rename({'histogram_decimalLatitude_decimalLongitude':'MI'})
+    red = ~np.isnan(ds.where(ds['MI']>mi))
+    hab = hab.reindex_like(red, method='nearest', tolerance=0.01)
+    total_hab = (hab*area).sum(['xt_ocean','yt_ocean'])
+    thresh_red = hab*red
+    redWhere = ~np.isnan(thresh_red.where(thresh_red['MI']!=0))
+    redYear = redWhere.groupby('time.year').mean().sel(year=slice(2000,2100))
+    redNum = (redYear*area).sum(['xt_ocean','yt_ocean'])
+    redPerc = (redNum['MI']/total_hab['MI'])*100
+    redEns = redPerc.mean(dim='ensemble')
+    return redEns
