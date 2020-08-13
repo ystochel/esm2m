@@ -11,7 +11,7 @@ from xhistogram.xarray import histogram as xh
 def graph(ds, plot, title, date, coords, ens):
         
     clevs = np.array([0,1,2,3,4,5,120])
-    colorange = ['red', 'orange', 'yellow','green','purple','lightskyblue']
+    colorange = ['tab:red', 'tab:orange', 'yellow','tab:green','tab:purple','lightskyblue']
     crs = ccrs.PlateCarree()
     X = ds['xt_ocean']
     Y = ds['yt_ocean']
@@ -295,8 +295,8 @@ def find_p(ds, mi, area):
     perc = s*100
 #     s = red['MI'].sum(dim='xt_ocean').sum(dim='yt_ocean')
 #     perc = (s/total)*100
-    # p = perc.mean(dim='ensemble')
-    return perc
+    p = perc.mean(dim='ensemble')
+    return p
 
 def percent(ds, ax, title):
     n = 12
